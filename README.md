@@ -31,10 +31,10 @@ DeauthVader, masum görünümünün altında bir **modem deauth silahı** taşı
 
 ## 👥 Contributors
 
-- [@OmerINKAYA](https://github.com/OmerINKAYA)
-- [@selimhocaoglu](https://github.com/selimhocaoglu)
-- [@EmirKaraaslan](https://github.com/EmirKaraaslan)
-- [@UygarTatar](https://github.com/UygarTatar)
+- [@OmerINKAYA](https://github.com/OmerINKAYA)  - Car Assembly, GPS Tracking, Free Ride Mode, Movement Calibration, Obstacle Avoidance
+- [@selimhocaoglu](https://github.com/selimhocaoglu)  - Hand-Driven Path Execution, Free Ride Mode, Obstacle Avoidance
+- [@EmirKaraaslan](https://github.com/EmirKaraaslan)  - Follow-Me Mode, Android App UI Design 
+- [@UygarTatar](https://github.com/UygarTatar)  - Car Assembly, Follow-Me Mode
 
 ## 📝 License
 
