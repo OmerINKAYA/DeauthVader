@@ -1,10 +1,8 @@
 package com.example.deauthvader
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
 import android.widget.Button
-import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.io.IOException
@@ -28,7 +26,7 @@ class ControlActivity : AppCompatActivity() {
         btnStop = findViewById(R.id.btnStop)
 
 
-        // İleri: bas → F, çek → S
+        // İleri: bas → H, çek → S
         btnF.setOnTouchListener { _, ev ->
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> sendCommand("H")
@@ -37,7 +35,7 @@ class ControlActivity : AppCompatActivity() {
             true
         }
 
-        // Geri: bas → B, çek → S
+        // Geri: bas → J, çek → S
         btnB.setOnTouchListener { _, ev ->
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> sendCommand("J")
@@ -46,7 +44,7 @@ class ControlActivity : AppCompatActivity() {
             true
         }
 
-        // Sola: bas → L, çek → S
+        // Sola: bas → K, çek → S
         btnL.setOnTouchListener { _, ev ->
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> sendCommand("K")
@@ -55,7 +53,7 @@ class ControlActivity : AppCompatActivity() {
             true
         }
 
-        // Sağa: bas → R, çek → S
+        // Sağa: bas → N, çek → S
         btnR.setOnTouchListener { _, ev ->
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> sendCommand("N")

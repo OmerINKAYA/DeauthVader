@@ -2,10 +2,8 @@ package com.example.deauthvader
 
 import android.app.Activity
 import android.bluetooth.BluetoothSocket
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
-import android.widget.ImageButton
 import android.widget.Toast
 
 class FollowMeActivity : Activity() {

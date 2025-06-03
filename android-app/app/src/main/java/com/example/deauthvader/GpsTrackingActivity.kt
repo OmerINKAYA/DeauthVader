@@ -106,7 +106,6 @@ class GpsTrackingActivity : AppCompatActivity(), OnMapReadyCallback {
                                 tvTime.text = "Time: $v"
                             }
                             else -> {
-                                // Diğer debug satırlarını göz ardı edebiliriz
                             }
                         }
                     }

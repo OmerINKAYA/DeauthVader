@@ -1,27 +1,33 @@
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 #include <NewPing.h>
-#include <Servo.h>
 
 // --- Motor pinleri ---
-#define ENA 5
-#define ENB 6
+#define ENA 5 //PWM olmalı
+#define ENB 6 //PWM olmalı
 #define IN1 8
 #define IN2 9
 #define IN3 10
 #define IN4 11
 
-// --- Değişken Gecikme Süreleri (Varsayılan Değerler) ---
-uint32_t ileriDelay = 300;   // Varsayılan ileri gitme süresi (ms)
-uint32_t sagaDonDelay = 400; // Varsayılan sağa dönme süresi (ms)
-uint32_t solaDonDelay = 400; // Varsayılan sola dönme süresi (ms)
-
-// --- GPS/Bluetooth ---
+// --- GPS Pinleri ve Tanımlaması ---
 static const int RXPin = A3;
 static const int TXPin = A2;
-static const uint32_t GPSBaud = 9600;
 TinyGPSPlus gps;
 SoftwareSerial gpsSerial(RXPin, TXPin);
+
+// --- Ultrasonik Sensör Pinleri ve Tanımlaması ---
+#define SAG_IR_PIN 4
+#define SOL_IR_PIN 7
+#define TRIGGER_PIN A0
+#define ECHO_PIN A1
+#define MAX_DISTANCE 100
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
+
+// --- Değişken Gecikme Süreleri (Varsayılan Değerler) ---
+uint32_t ileriDelay = 300;   // Varsayılan ileri ve geri gitme süresi (ms)
+uint32_t sagaDonDelay = 400; // Varsayılan sağa dönme süresi (ms)
+uint32_t solaDonDelay = 400; // Varsayılan sola dönme süresi (ms)
 
 // --- Fonksiyon prototipleri ---
 void ileriGit();
@@ -30,57 +36,40 @@ void solaDon();
 void sagaDon();
 void dur();
 void kalibreliHizVer(int hiz);
-void handleSettingCommand(); // Ayar komutlarını işleyen fonksiyon
+void handleSettingCommand(); // Kalibrasyon ayarları için olan fonskiyon
 bool checkObstacles();       // Engel kontrolü yapan fonksiyon
-void processMovementCommand(char command); // Hareket komutlarını işleyen yeni fonksiyon
+void processMovementCommand(char command); // Hareket komutlarını işleyen fonksiyon
 
-// --- Sensör pinleri ---
-#define SAG_IR_PIN 4 // Sağ ön IR sensör çıkışı
-#define SOL_IR_PIN 7 // Sol ön IR sensör çıkışı
-#define TRIGGER_PIN A0
-#define ECHO_PIN A1
-//#define SERVO_PIN 3
-#define MAX_DISTANCE 100
-NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
-
-// --- Servo ---
-/*Servo myservo;
-int pos = 0;*/
-bool otonomMod = false;  // ⚠️ Default: Manuel mod
 
 // --- Robot Durumları (State Machine) ---
 enum RobotState {
     STATE_IDLE,             // Boşta, komut bekliyor
-    STATE_FORWARD,          // İleri gidiyor (süreli)
-    STATE_BACKWARD,         // Geri gidiyor (süresiz)
-    STATE_TURN_LEFT,        // Sola dönüyor (süreli)
-    STATE_TURN_RIGHT,       // Sağa dönüyor (süreli)
+    STATE_FORWARD,          // İleri gidiyor
+    STATE_BACKWARD,         // Geri gidiyor
+    STATE_TURN_LEFT,        // Sola dönüyor
+    STATE_TURN_RIGHT,       // Sağa dönüyor
     STATE_OBSTACLE_STOP     // Engel algılandı, durduruldu
 };
 
-RobotState currentState = STATE_IDLE; // Başlangıç durumu
-unsigned long movementStartTime = 0; // Süreli hareketin başlangıç zamanı (millis())
-bool isStoppedByObstacle = false; // Engel nedeniyle durdurulup durdurulmadığını izler
+RobotState currentState = STATE_IDLE;   // Başlangıç durumu
+unsigned long movementStartTime = 0;    // Süreli hareketin başlangıç zamanı (millis())
+bool isStoppedByObstacle = false;       // Engel nedeniyle durdurulup durdurulmadığını izler
 
 void setup() {
-    Serial.begin(9600);
-    gpsSerial.begin(GPSBaud);
+    // --- UART Portlarını Başlatma ---
+    Serial.begin(9600);     // D0, D1 (Default UART)
+    gpsSerial.begin(9600);
 
-    // Motorlar
+    // --- Motor pinlerinin tanımlanması ---
     pinMode(ENA, OUTPUT); pinMode(ENB, OUTPUT);
     pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
     pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
     dur();
 
-    // IR Sensör pinleri
-    pinMode(SAG_IR_PIN, INPUT); // IR sensörleri INPUT olarak ayarla (Dahili pull-up kullanmıyorsanız external pull-up gerekebilir)
+    // --- IR Sensör pinlerinin tanımlanması ---
+    // Eğer IR sensörleriniz dahili pull-up kullanmıyorsa "INPUT" yerine "INPUT_PULLUP" kullanın (uyarı görünce 0 olmalı)
+    pinMode(SAG_IR_PIN, INPUT);
     pinMode(SOL_IR_PIN, INPUT);
-
-    // Servo başlat
-    /*myservo.attach(SERVO_PIN);
-    for (pos = 90; pos <= 180; pos++) { myservo.write(pos); delay(10); }
-    for (pos = 180; pos >= 0; pos--) { myservo.write(pos); delay(10); }
-    for (pos = 0; pos <= 90; pos++) { myservo.write(pos); delay(10); }*/
 
     Serial.println(F("🔧 Sistem Başlatıldı."));
     Serial.println(F("🔧 [DEBUG] Varsayılan Gecikmeler:"));
@@ -95,7 +84,7 @@ void loop() {
         gps.encode(gpsSerial.read());
     }
 
-    if (gps.location.isUpdated()) { // Bu kontrolü daha seyrek yapmak için bir zamanlayıcı eklenebilir
+    if (gps.location.isUpdated()) {
         Serial.print(F("Latitude: "));
         Serial.println(gps.location.lat(), 6);
         Serial.print(F("Longitude: "));
@@ -103,7 +92,7 @@ void loop() {
         Serial.print(F("Satellites: "));
         Serial.println(gps.satellites.value());
 
-        // Diğer GPS bilgileri (uydu, tarih, saat) buraya eklenebilir.
+        // Diğer GPS bilgileri (uydu, tarih, saat)
       if (gps.date.isValid()) {
         char dateStr[11];
         sprintf(dateStr, "%02d/%02d/%02d", gps.date.day(), gps.date.month(), gps.date.year() % 100);
@@ -122,14 +111,14 @@ void loop() {
     if(Serial.available() > 0) {
         char gelen = Serial.peek();
 
-        if (gelen == '#') {
-            Serial.read(); // '#' karakterini buffer'dan oku ve atla
-            handleSettingCommand(); // Ayar komutunu işle (Engel olsa bile ayar komutu işlenebilir, ancak engel yokken buradayız)
-        }else if (gelen == 'A' || gelen == 'a') {
+        if (gelen == '#') { // '#' karakteri Kalibrasyon gönderildiğini belirten karakter
+            Serial.read();
+            handleSettingCommand(); // Ayar komutunu işle (Engel olsa bile ayar komutu işlenebilir)
+        }else if (gelen == 'A' || gelen == 'a') { // Follow me özelliğini aktifleştir
             Serial.read();
             otonomMod = true;
             Serial.println("[MODE] Otonom mod AKTİF");
-        } else if (gelen == 'M' || gelen == 'm') {
+        } else if (gelen == 'M' || gelen == 'm') { // Follow me özelliğini kapat
             Serial.read();
             otonomMod = false;
             dur();
@@ -137,13 +126,11 @@ void loop() {
         }
 
         // --- B) Engel kontrolü ---
-        // Her loop iterasyonunda engel kontrolü yapılır, durum ne olursa olsun.
-        else if (checkObstacles()) {
+        else if (checkObstacles()) { // Her loop iterasyonunda engel kontrolü yapılır, durum ne olursa olsun.
             if (currentState != STATE_OBSTACLE_STOP) { // Eğer henüz engel durumuna geçmediyse
                 Serial.println(F("[ENGEL] Engel algılandı! Robot durduruluyor."));
-                dur(); // Motorları durdur
+                dur();
                 currentState = STATE_OBSTACLE_STOP; // Durumu güncelle
-                isStoppedByObstacle = true; // Bayrağı set et
                 // Engel durumuna girildiğinde buffer'daki hareket komutlarını temizle
                 unsigned long clearStart = millis();
                 while(Serial.available() > 0 && (Serial.peek() != '\n') && (millis() - clearStart < 50) ) Serial.read();
@@ -156,15 +143,14 @@ void loop() {
             if (currentState == STATE_OBSTACLE_STOP) { // Engel durumu yeni bittiyse
                 Serial.println(F("[ENGEL] Engel kalktı. Yeni komut bekleniyor."));
                 currentState = STATE_IDLE; // Durumu boşa al, yeni komut bekle
-                isStoppedByObstacle = false; // Bayrağı sıfırla
             }
 
-            // Engel yokken veya engel kalktıktan sonra: Bluetooth'tan (Serial) komutları işle
+            // Engel yokken Bluetooth'tan(Serial) gelen komutları işle
             if (Serial.available() > 0) {
                 char peekChar = Serial.peek(); // İlk karaktere bak
                 // Hareket komutları ('F', 'B', 'L', 'R', 'S') sadece STATE_IDLE durumundayken veya sadece 'S' komutu işlenir
                 if (currentState == STATE_IDLE && peekChar != '\n' && peekChar != '\r') {
-                    char gelen = Serial.read(); // Komutu oku
+                    char gelen = Serial.read();
                     Serial.print(F("[DEBUG] BT hareket komutu alındı (IDLE durumunda): ")); Serial.println(gelen);
                     processMovementCommand(gelen); // Hareket komutunu işle
 
@@ -182,16 +168,14 @@ void loop() {
                     if(Serial.available() > 0 && Serial.peek() == '\n') Serial.read(); // '\n' varsa onu da temizle
                 }
                 else {
-                    // Eğer peekChar '\n' veya '\r' ise, sadece buffer'dan oku ve atla.
-                    Serial.read();
-                    // Serial.println(F("[DEBUG] Satır sonu karakteri atlandı.")); // İsteğe bağlı debug mesajı
+                    Serial.read(); // Buraya gelmez fakat ulaşırsa arduino reset atmasın diye var
                 }
             }
         }
     }
 
 
-    // --- C) Durum Makinesi - Mevcut Duruma Göre Hareket Et ---
+    // --- C) State Machine - Mevcut Duruma Göre Hareket Et ---
     unsigned long currentTime = millis();
     switch (currentState) {
         case STATE_FORWARD:
@@ -201,13 +185,8 @@ void loop() {
                 dur();
                 currentState = STATE_IDLE;
             }
-            // Engel kontrolü loop'un başında yapılıyor, burada tekrar gerek yok.
             break;
 
-        case STATE_BACKWARD:
-            // Geri giderken engel kontrolü loop'un başında yapılır.
-            // 'S' komutu veya engel durumu bu durumu sonlandırır.
-            break;
 
         case STATE_TURN_LEFT:
             // Belirtilen süre geçtiyse dur
@@ -216,8 +195,8 @@ void loop() {
                 dur();
                 currentState = STATE_IDLE;
             }
-             // Engel kontrolü loop'un başında yapılıyor.
             break;
+
 
         case STATE_TURN_RIGHT:
             // Belirtilen süre geçtiyse dur
@@ -226,20 +205,25 @@ void loop() {
                 dur();
                 currentState = STATE_IDLE;
             }
-             // Engel kontrolü loop'un başında yapılıyor.
             break;
+
 
         case STATE_IDLE:
-            // Boşta dururken motorlar zaten durmuş olmalı.
+            // Boşta ise bir şey yapmaya gerek yok
             break;
 
+
+        case STATE_BACKWARD:
+            // Hand Driven'da geri gitme olmadığı için burası boş
+            break;
+
+
         case STATE_OBSTACLE_STOP:
-             // Engel varken burada bekler. Motorlar durdurulmuş olmalı.
-             // Engelin kalkması loop'un başındaki engel kontrolü tarafından algılanır ve durum IDLE'a geçer.
+             // Zaten durmuş durumda bir şey yapmaya gerek yok
             break;
     }
 
-    // --- Otonom Mod: Engelden Kaçma ---
+    // --- Follow me: Ultrasonik Sensör ile nesne takibi ---
     if (otonomMod) {
         unsigned int distance = sonar.ping_cm();
         int Right_Value = digitalRead(SAG_IR_PIN);
@@ -249,17 +233,18 @@ void loop() {
         Serial.print("[AUTO] RIGHT: "); Serial.println(Right_Value);
         Serial.print("[AUTO] LEFT : "); Serial.println(Left_Value);
 
+        // Mesafeye göre daha hızlı veya yavaş çalışıyor
         if ((Right_Value == 1) && (distance >= 10 && distance <= 35) && (Left_Value == 1)) {
             ileriGit(80);
         } else if ((Right_Value == 1) && (distance > 35 && distance <= 60) && (Left_Value == 1)) {
             ileriGit(100);
         } else if ((Right_Value == 1) && (Left_Value == 0)) {
-            solaDon(100);
+            solaDon(90);
         } else if ((Right_Value == 0) && (Left_Value == 1)) {
-            sagaDon(100);
+            sagaDon(90);
         } else if ((Right_Value == 1) && (Left_Value == 1)) {
             dur();
-        } else if (distance >= 0 && distance < 15) {
+        } else if (distance >= 0 && distance < 10) {
             dur();
         }
     }
@@ -267,16 +252,16 @@ void loop() {
 }
 
 
-// *** YENİ FONKSİYON: Gelen hareket komutunu işler ve durumu ayarlar ***
+// --- Hareket komutları ---
 void processMovementCommand(char command) {
-     // Engel olup olmadığını zaten loop'un başında kontrol ettik ve duruma göre buraya geldik.
-     // Bu fonksiyon sadece STATE_IDLE iken çağrılmalı.
+     // Bu fonksiyon sadece STATE_IDLE iken çağrılmalı
      if (currentState != STATE_IDLE) {
          Serial.println(F("[HATA] processMovementCommand fonksiyonu IDLE durumunda değilken çağrıldı!"));
          return; // Hata durumu, işlem yapma
      }
 
      switch (command) {
+         // Bu kısım hand-driven-path'e ait
          case 'F': case 'f':
              Serial.println(F("[DEBUG] Komut: İleri (Süreli) - Başlatılıyor"));
              ileriGit(100);
@@ -287,7 +272,7 @@ void processMovementCommand(char command) {
              Serial.println(F("[DEBUG] Komut: Geri (Süresiz) - Başlatılıyor"));
              geriGit(100);
              currentState = STATE_BACKWARD; // Durumu geri olarak ayarla
-             // Süresiz olduğu için zamanlayıcı başlatmaya gerek yok
+             // Şu an hand-driven-path'te geri gitme olmadığı için işlevsiz
              break;
          case 'L': case 'l':
              Serial.println(F("[DEBUG] Komut: Sola Dön (Süreli) - Başlatılıyor"));
@@ -302,13 +287,12 @@ void processMovementCommand(char command) {
              currentState = STATE_TURN_RIGHT; // Durumu sağa dön olarak ayarla
              break;
          case 'S': case 's':
-             // 'S' komutu artık main loop'ta doğrudan işleniyor. Buraya gelmemeli.
-             // Ancak defensive programming için burada da durdurabiliriz.
+             // Bu komut zaten loop içerisinde işleniyor fakat ne olur ne olmaz olarak burada da var
              Serial.println(F("[DEBUG] Komut: Dur - İşleniyor (processMovementCommand)"));
              dur();
              currentState = STATE_IDLE;
-             isStoppedByObstacle = false;
              break;
+         // Bu kısım free-ride'a ait
          case 'H': case 'h':
             ileriGit(100);
             break;
@@ -322,39 +306,26 @@ void processMovementCommand(char command) {
             sagaDon(100);
             break;
          default:
+             // Tanımsız komutta gelrise durması için
              Serial.print(F("[DEBUG] Tanımsız hareket komutu: '")); Serial.print(command); Serial.println(F("'"));
-             // Tanımsız komutta durdurmak istenirse:
-             // dur();
-             // currentState = STATE_IDLE;
-             // isStoppedByObstacle = false;
+             dur();
+             currentState = STATE_IDLE;
              break;
      }
 }
 
 
-// *** Engel kontrolü yapar ***
-// Sensör LOW okuyorsa engel var demektir (modülünüze göre HIGH olabilir)
+// --- Engel kontrolü yapar ---
+// Sensör LOW okuyorsa engel var demektir (modülünüze göre HIGH olabilir, ama ben PULL_UP kullanmanızı öneririm)
 bool checkObstacles() {
-    // Dahili pull-up kullanmıyorsanız, IR sensör pinlerine harici pull-up dirençleri bağlayın
-    // veya pinMode(PIN, INPUT_PULLUP); kullanın.
-    // Varsayılan IR modülleri genellikle engel varken LOW verir.
-    bool sagEngel = digitalRead(SAG_IR_PIN) == LOW; // Sağ sensör LOW mu?
-    bool solEngel = digitalRead(SOL_IR_PIN) == LOW; // Sol sensör LOW mu?
-
-    // Debug için sensör durumlarını görmek isterseniz yorum satırını kaldırın
-    // static unsigned long lastDebug = 0;
-    // if (millis() - lastDebug > 100) { // Çok sık basmamak için
-    //    Serial.print(F("[DEBUG] IR Kontrol: Sağ=")); Serial.print(digitalRead(SAG_IR_PIN)); // Raw değer
-    //    Serial.print(F(", Sol=")); Serial.print(digitalRead(SOL_IR_PIN));   // Raw değer
-    //    Serial.print(F(" | Engel Algılandı: ")); Serial.println(sagEngel || solEngel);
-    //    lastDebug = millis();
-    // }
+    bool sagEngel = digitalRead(SAG_IR_PIN) == LOW;
+    bool solEngel = digitalRead(SOL_IR_PIN) == LOW;
 
     return sagEngel || solEngel; // Herhangi biri engel algılarsa true dön
 }
 
 
-// *** Ayar komutlarını işler (Bu fonksiyon delay kullanmadığı için millis'e çevirmeye gerek yok) ***
+// --- Kalibrasyon Komutları ---
 void handleSettingCommand() {
     // '#' karakteri zaten ana loop'ta okundu. Sırada Tip (I,R,L) var.
     unsigned long startTime = millis();
@@ -366,7 +337,7 @@ void handleSettingCommand() {
         Serial.print(F("[DEBUG] Ayar Komutu: Tip='")); Serial.print(identifier);
         Serial.print(F("', Okunan Ham Değer=")); Serial.println(newValue);
 
-        // Değerin geçerli olup olmadığını kontrol et (pozitif ve makul bir aralıkta)
+        // Değerin geçerli olup olmadığını kontrol et
         if (newValue > 0 && newValue <= 30000) { // Örn: max 30 saniye delay
             uint32_t newDelayVal = (uint32_t)newValue;
             bool updated = false;
@@ -391,7 +362,6 @@ void handleSettingCommand() {
                     Serial.println(F("'. Değer atanmadı."));
                     break;
             }
-            // if (updated) { Serial.println(F("   Ayar başarıyla güncellendi.")); }
         } else {
             if (newValue <= 0) {
                 Serial.println(F("[UYARI] Ayar için geçersiz (<=0) veya parse edilemeyen değer alındı."));
@@ -400,14 +370,12 @@ void handleSettingCommand() {
             }
         }
 
-        // *** ÖNEMLİ: BUFFER TEMİZLEME ***
-        // Serial.parseInt() sonrasında buffer'da kalan '\n' veya diğer artıkları temizle.
+        // --- Buffer Temizleme ---
         unsigned long clearBufferStartTime = millis();
         while (Serial.available() > 0 && (millis() - clearBufferStartTime < 50)) { // Kısa bir timeout (50ms)
             char tempChar = Serial.read();
             if (tempChar == '\n') {
-                // Serial.println(F("[DEBUG] Ayar komutu sonrası '\\n' temizlendi."));
-                break; // '\n' bulundu ve tüketildi, işlem tamam.
+                break; // '\n' bulundu, işlem tamam.
             }
         }
 
@@ -448,20 +416,21 @@ void dur() {
     kalibreliHizVer(0);
 }
 
-// Hız kalibrasyon fonksiyonu (Değişiklik yok)
+// Hız kalibrasyon fonksiyonu (Buranın dönüşler veya ileri gitme süresi ile alakası yoktur. Motor güçlerinin ayarlandığı yerdir.)
 void kalibreliHizVer(int hiz) {
-    int minA = 110; // Sol motor için minimum PWM (deneyerek bulun)
-    int minB = 135; // Sağ motor için minimum PWM (deneyerek bulun)
-    int maxA = 235;
-    int maxB = 255;
+    // Alt satırdaki min ve max değerleri kendiniz deneyerek bulmalısınız çünkü motor sensörü ve pile göre değişken.
+    int minA = 110; // Sağ motor için minimum PWM (min değer 0, max değer 255)
+    int minB = 135; // Sol motor için minimum PWM (min değer 0, max değer 255)
+    int maxA = 235; // Sağ motor için maximum PWM (min değer 0, max değer 255)
+    int maxB = 255; // Sol motor için maximum PWM (min değer 0, max değer 255)
     int pwmA, pwmB;
 
     if (hiz == 0) {
-        pwmA = 0;
-        pwmB = 0;
+        pwmA = 0; // durması için
+        pwmB = 0; // durması için
     } else {
-        pwmA = map(hiz, 0, 100, minA, maxA);
-        pwmB = map(hiz, 0, 100, minB, maxB);
+        pwmA = map(hiz, 1, 100, minA, maxA);
+        pwmB = map(hiz, 1, 100, minB, maxB);
     }
 
     pwmA = constrain(pwmA, 0, 255);

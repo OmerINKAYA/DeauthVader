@@ -11,7 +11,6 @@ import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import kotlin.concurrent.thread
-import kotlin.math.*
 
 /**
  * GridDrawControlActivity: Izgara üzerinde çizim yaparak robotu yönlendirme aktivitesi.
