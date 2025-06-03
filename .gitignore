@@ -1,0 +1,17 @@
+# Global
+.DS_Store
+*.iml
+
+# Root & Android Studio
+.idea/
+android-app/.idea/
+android-app/.gradle/
+**/build/
+android-app/local.properties
+android-app/captures/
+android-app/.cxx/
+android-app/.externalNativeBuild/
+
+
+# VSCode (kullanmıyorsan da zarar yok)
+.vscode/

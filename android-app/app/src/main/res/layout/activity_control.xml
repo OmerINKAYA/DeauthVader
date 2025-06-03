@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Ana içerik (yön butonları + dur) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp">
+
+        <GridLayout
+            android:rowCount="2"
+            android:columnCount="3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <View android:layout_width="60dp" android:layout_height="60dp" />
+
+            <Button
+                android:id="@+id/btnForward"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:textSize="24sp"
+                android:text="↑"
+                android:textColor="#FFFFFF"
+                android:background="#444444" />
+
+            <View android:layout_width="60dp" android:layout_height="60dp" />
+
+            <Button
+                android:id="@+id/btnLeft"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="←"
+                android:textSize="24sp"
+                android:textColor="#FFFFFF"
+                android:background="#444444" />
+
+            <Button
+                android:id="@+id/btnBackward"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="↓"
+                android:textSize="24sp"
+                android:textColor="#FFFFFF"
+                android:background="#444444" />
+
+            <Button
+                android:id="@+id/btnRight"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="→"
+                android:textSize="24sp"
+                android:textColor="#FFFFFF"
+                android:background="#444444" />
+        </GridLayout>
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_marginTop="24dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="24sp"
+            android:text="■ Dur"
+            android:textColor="#FFFFFF"
+            android:background="#FF4444" />
+    </LinearLayout>
+
+    <!-- Sol üst köşeye sabit geri butonu -->
+    <Button
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="←"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="20sp"
+        android:background="@drawable/button_border_white"
+        android:layout_gravity="top|start"
+        android:layout_margin="16dp" />
+</FrameLayout>

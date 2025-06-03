@@ -1,0 +1,66 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.deauthvader">
+
+    <!-- Bluetooth izinleri -->
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <!-- Android 12+ için -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <application
+        android:allowBackup="true"
+        android:label="DeauthVader"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="YOUR_API_KEY" /> // Change your API key here
+        <!-- Launcher Activity -->
+        <activity
+            android:name="com.example.deauthvader.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Menu ekranı -->
+        <activity
+            android:name="com.example.deauthvader.MenuActivity"
+            android:exported="false"/>
+
+        <!-- Kontrol (Free Move) ekranı -->
+        <activity
+            android:name="com.example.deauthvader.ControlActivity"
+            android:exported="false"/>
+
+        <!-- GPS Tracking fonksiyonu -->
+        <activity
+            android:name="com.example.deauthvader.GpsTrackingActivity"
+            android:exported="false"/>
+
+        <!-- Follow Me fonksiyonu -->
+        <activity
+            android:name="com.example.deauthvader.FollowMeActivity"
+            android:exported="false"/>
+
+        <!-- WiFi Attack fonksiyonu -->
+        <activity
+            android:name="com.example.deauthvader.WifiAttackActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name="com.example.deauthvader.GridDrawControlActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name="com.example.deauthvader.CalibrationActivity"
+            android:exported="false"/>
+
+
+    </application>
+</manifest>
