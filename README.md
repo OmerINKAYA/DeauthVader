@@ -29,6 +29,13 @@ DeauthVader, çok amaçlı bir Arduino tabanlı akıllı araç projesidir. Bluet
 
 DeauthVader, masum görünümünün altında bir **modem deauth silahı** taşır. ESP8266 ile geleneksel WPA2 modemlere gizlice saldırabilir. Tabii ki sadece eğitim ve test amaçlı kullanılması tavsiye edilir 😉
 
+## 👥 Contributors
+
+- [@OmerINKAYA](https://github.com/OmerINKAYA)
+- [@selimhocaoglu](https://github.com/selimhocaoglu)
+- [@EmirKaraaslan](https://github.com/EmirKaraaslan)
+- [@UygarTatar](https://github.com/UygarTatar)
+
 ## 📝 License
 
 This project is licensed under the [MIT License](LICENSE).
